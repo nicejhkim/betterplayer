@@ -22,6 +22,7 @@ import 'package:better_player/src/subtitles/better_player_subtitles_factory.dart
 import 'package:better_player/src/video_player/video_player.dart';
 import 'package:better_player/src/video_player/video_player_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 // Package imports:
 import 'package:path_provider/path_provider.dart';
@@ -194,6 +195,8 @@ class BetterPlayerController extends ChangeNotifier {
   ///Flag which holds information about player visibility
   bool _isPlayerVisible = true;
 
+  final allowVideoPlay = true.obs;
+
   BetterPlayerController(
     this.betterPlayerConfiguration, {
     this.betterPlayerPlaylistConfiguration,
@@ -204,6 +207,15 @@ class BetterPlayerController extends ChangeNotifier {
     if (betterPlayerDataSource != null) {
       setupDataSource(betterPlayerDataSource);
     }
+    ever(allowVideoPlay, (bool allow) {
+      if (allow) {
+        if (!isPlaying()) play();
+        postEvent(BetterPlayerEvent(BetterPlayerEventType.allowVideoPlay));
+      } else {
+        if (isPlaying()) pause();
+        postEvent(BetterPlayerEvent(BetterPlayerEventType.disallowVideoPlay));
+      }
+    });
   }
 
   ///Get BetterPlayerController from context. Used in InheritedWidget.
@@ -447,7 +459,8 @@ class BetterPlayerController extends ChangeNotifier {
       }
       if (_isAutomaticPlayPauseHandled()) {
         if (_appLifecycleState == AppLifecycleState.resumed &&
-            _isPlayerVisible) {
+            _isPlayerVisible &&
+            allowVideoPlay.value) {
           await play();
         } else {
           _wasPlayingBeforePause = true;
@@ -496,7 +509,8 @@ class BetterPlayerController extends ChangeNotifier {
   ///Start video playback. Play will be triggered only if current lifecycle state
   ///is resumed.
   Future<void> play() async {
-    if (_appLifecycleState == AppLifecycleState.resumed) {
+    if (_appLifecycleState == AppLifecycleState.resumed &&
+        allowVideoPlay.value) {
       await videoPlayerController.play();
       _hasCurrentDataSourceStarted = true;
       _wasPlayingBeforePause = null;
@@ -756,7 +770,7 @@ class BetterPlayerController extends ChangeNotifier {
     videoPlayerController.pause();
     await setupDataSource(betterPlayerDataSource.copyWith(url: url));
     videoPlayerController.seekTo(position);
-    if (wasPlayingBeforeChange) {
+    if (wasPlayingBeforeChange && allowVideoPlay.value) {
       videoPlayerController.play();
     }
     _postEvent(BetterPlayerEvent(BetterPlayerEventType.changedResolution));
