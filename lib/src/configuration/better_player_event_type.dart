@@ -19,5 +19,7 @@ enum BetterPlayerEventType {
   changedResolution,
   pipStart,
   pipStop,
-  setupDataSource
+  setupDataSource,
+  allowVideoPlay,
+  disallowVideoPlay,
 }
